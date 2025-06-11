@@ -19,12 +19,8 @@ from util.sudo_handler import clear_all_service
 from util.file_handler import upload_file, list_files, delete_file
 from util.chat_handler import chat_service
 
-# Use langchain-ollama for LLM integration
-# TODO: Add Class Import for Embedding Model and Inference Model
-# Fix; Create two classes, one for embeddings and one for LLM, and pass them here and create instances
-# Take the model parameters from env file
 from langchain_ollama import OllamaLLM
-ollama_llm = OllamaLLM(model="mistral")
+ollama_llm = OllamaLLM(model="gemma3:4b")
 
 UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/files"))
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -53,7 +49,7 @@ rag_pipeline = RAGPipeline(vector_db_path=CHROMA_PATH)
 @app.post("/api/admin/clear_all", response_model=AdminClearAllResponse)
 def clear_all(admin_token: str = Header(..., alias="admin-token", min_length=8, max_length=128), db: Session = Depends(get_db)) -> AdminClearAllResponse:
     """
-    Danger: Delete ALL files and chat history from DB and vectorstore. Delegates business logic to admin_service.
+    Danger: Delete ALL files and chat history from DB and vectorstore.
     Validates admin token length (8-128 chars).
     """
     ADMIN_TOKEN = os.environ.get("CHAT_RAG_ADMIN_TOKEN", "supersecret")
@@ -114,7 +110,7 @@ def health_check():
     }
 
 @app.post("/api/upload", response_model=FileUploadResponse)
-def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)) -> FileUploadResponse:
+def upload_file_in_db(file: UploadFile = File(...), db: Session = Depends(get_db)) -> FileUploadResponse:
     """
     Upload a file and ingest into the RAG pipeline. Delegates business logic to file_service.
     Validates file extension against SUPPORTED_EXTENSIONS.
@@ -134,7 +130,7 @@ def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)) -> 
     return FileUploadResponse(id=db_file.id, filename=db_file.filename)
 
 @app.get("/api/files", response_model=list[FileListItem])
-def list_files(db: Session = Depends(get_db)) -> list[FileListItem]:
+def list_files_in_db(db: Session = Depends(get_db)) -> list[FileListItem]:
     """
     List all files in the database. Delegates business logic to file_service.
     """
@@ -149,7 +145,7 @@ def list_files(db: Session = Depends(get_db)) -> list[FileListItem]:
     ]
 
 @app.delete("/api/files/{file_id}")
-def delete_file(file_id: int, db: Session = Depends(get_db)) -> dict:
+def delete_file_in_db(file_id: int, db: Session = Depends(get_db)) -> dict:
     """
     Delete a file: removes from DB and disk, attempts vectorstore cleanup. 
     Delegates business logic to file_service for DB/disk, keeps vectorstore logic here to avoid circular dependency.
