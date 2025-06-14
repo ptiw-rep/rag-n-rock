@@ -70,7 +70,10 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
 
 @app.post("/api/admin/clear_all", response_model=AdminClearAllResponse)
-def clear_all(admin_token: str = Header(..., alias="admin-token", min_length=8, max_length=128), db: Session = Depends(get_db)) -> AdminClearAllResponse:
+def clear_all(
+    admin_token: str = Header(..., alias="admin-token", min_length=8, max_length=128), 
+    db: Session = Depends(get_db)
+    ) -> AdminClearAllResponse:
     """
     Danger: Delete ALL files and chat history from DB and vectorstore.
     Validates admin token length (8-128 chars).
@@ -156,7 +159,7 @@ def upload_file_in_db(
     db_file = upload_file(file=file, db=db, user_id=db_user.id)
     # Ingest into RAG pipeline (kept here to avoid circular dependency)
     try:
-        rag_pipeline.ingest(db_file.filepath, metadata={"file_id": db_file.id, "filename": db_file.filename, "user_id": db_user.id})
+        rag_pipeline.ingest(db_file.filepath, metadata={"file_id": db_file.id, "filename": db_file.filename})
     except Exception as e:
         db.delete(db_file)
         db.commit()
@@ -243,8 +246,9 @@ def chat(
     chat_req: ChatRequest = None,
     question: str = Query(None, min_length=3, max_length=500),
     file_id: int = Query(None),
-    db: Session = Depends(get_db)
-) -> ChatResponse:
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+    ) -> ChatResponse:
     """
     Chat endpoint: supports hybrid retrieval (keywords, metadata, MMR, k). Accepts ChatRequest body or legacy query params.
     """
@@ -253,13 +257,16 @@ def chat(
         req = chat_req
     else:
         req = ChatRequest(question=question, file_id=file_id)
-    return ChatResponse(**chat_service(
-        question=req.question,
-        file_id=req.file_id,
-        db=db,
-        rag_pipeline=rag_pipeline,
-        ollama_llm=ollama_llm,
-        keywords=req.keywords,
-        metadata_filter=req.metadata_filter,
-        k=req.k
-    ))
+    return ChatResponse(
+        **chat_service(
+            question=req.question,
+            file_id=req.file_id,
+            db=db,
+            rag_pipeline=rag_pipeline,
+            ollama_llm=ollama_llm,
+            current_user=current_user,
+            keywords=req.keywords,
+            metadata_filter=req.metadata_filter,
+            k=req.k
+        )
+    )
