@@ -16,12 +16,10 @@ class RAGPipeline:
         :param chunking_strategy: 'auto', 'header', or 'character'. If 'auto', use header-based for markdown, otherwise fallback.
         """
         self.vector_db_path = vector_db_path
-        # TODO: Take embedding model as function parameter
-        # Soln: In main, create two objects, one for embeddings and one for LLM, and pass them here
-        # Fix the types of parameters to OllamaEmbeddings and OllamaLLM type class
         self.embeddings = OllamaEmbeddings(model="nomic-embed-text")
+        
         self.vectorstore = Chroma(persist_directory=self.vector_db_path, embedding_function=self.embeddings)
-        # TODO: Take LLM model as function parameter
+
         self.llm = OllamaLLM(model="llama3")
         self.chunking_strategy = chunking_strategy
         logging.info(f"Initialized RAGPipeline.")
@@ -72,24 +70,40 @@ class RAGPipeline:
         self.vectorstore.add_documents(splits)
         logging.info(f"Ingested {len(splits)} chunks from {file_path} using {splitter.__class__.__name__}")
 
-    def retrieve(self, query: str, k: int = 4, keywords: Optional[list] = None, metadata_filter: Optional[dict] = None) -> List[Document]:
+    def retrieve(
+            self, 
+            query: str, 
+            k: int = 4, 
+            keywords: Optional[list] = None, 
+            metadata_filter: Optional[dict] = None,
+            user_id: Optional[str] = None
+            ) -> List[Document]:
         """
         Hybrid retrieval: combines vector search, keyword, and metadata filtering. Always uses strict top-k retrieval (no MMR).
         :param query: user query
         :param k: number of results
         :param keywords: list of keywords to boost/filter
         :param metadata_filter: dict of metadata filters (e.g. {"source_file": ...})
+        :param user_id: optional, restricts results to a specific user's files
         """
+        if user_id is not None:
+            if metadata_filter is None:
+                metadata_filter = {}
+            metadata_filter["user_id"] = str(user_id)
+
         retriever = self.vectorstore.as_retriever(search_kwargs={"k": k})
+
         if metadata_filter:
             results = retriever.invoke(query, filter=metadata_filter)
         else:
             results = retriever.invoke(query)
+
         # Keyword filter/boost
         if keywords:
             keyword_results = [doc for doc in results if any(kw.lower() in doc.page_content.lower() for kw in keywords)]
             # Merge, deduplicate, and sort (keyword hits first)
             unique = {id(doc): doc for doc in keyword_results + results}
             results = list(unique.values())[:k]
+            
         logging.info(f"Hybrid retrieval for query '{query}': {len(results)} docs (strict top-k, keywords={keywords}, metadata={metadata_filter})")
         return results

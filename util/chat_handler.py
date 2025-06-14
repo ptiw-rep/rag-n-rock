@@ -1,6 +1,6 @@
 import os, re
 from sqlalchemy.orm import Session
-from database.models import File as DBFile, ChatHistory
+from database.models import File as DBFile, ChatHistory, User
 from datetime import datetime
 from fastapi import HTTPException
 from typing import Optional, Dict, Any
@@ -11,6 +11,7 @@ def chat_service(
     db: Session,
     rag_pipeline,
     ollama_llm,
+    current_user: dict,
     keywords: Optional[list] = None,
     metadata_filter: Optional[dict] = None,
     k: Optional[int] = 4
@@ -18,13 +19,23 @@ def chat_service(
     """
     Handles chat logic: retrieves relevant docs (hybrid/vector/keyword/MMR), constructs prompt, calls LLM, logs history.
     """
-    db_files = db.query(DBFile).all()
+    # Get user from DB based on current_user['username']
+    db_user = db.query(User).filter(User.username == current_user["username"]).first()
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    db_files = db.query(DBFile).filter(DBFile.user_id == db_user.id).all()
+
     if not db_files:
         print(f"[Chat] No files in DB at {datetime.now().isoformat()}")
         return {"answer": "No files are available for answering. Please upload a file first.", "sources": []}
     
-    # Metadata filter by file_id if provided
+    # If file_id provided, ensure it belongs to the current user
     if file_id:
+        valid_file_ids = {f.id for f in db_files}
+        if file_id not in valid_file_ids:
+            raise HTTPException(status_code=403, detail="You do not have access to this file")
+        
         if metadata_filter is None:
             metadata_filter = {}
         metadata_filter["file_id"] = file_id
@@ -60,7 +71,7 @@ def chat_service(
     
     # Log chat history
     chat = ChatHistory(
-        user_id=None,
+        user_id=db_user.id,
         file_id=file_id,
         question=question,
         answer=answer,
@@ -86,4 +97,5 @@ def chat_service(
         most_relevant_file = max(file_counts, key=file_counts.get)
     else:
         most_relevant_file = 'Unknown File'
+        
     return {"answer": answer, "sources": [most_relevant_file]}
