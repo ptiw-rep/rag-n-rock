@@ -39,31 +39,15 @@ This project provides:
 
 ## 🧩 Technologies Used
 
-  
-
-| Component | Technology |
-
-|----------|------------|
-
-| Framework | [FastAPI](https://fastapi.tiangolo.com/) |
-
-| ORM | [SQLAlchemy](https://www.sqlalchemy.org/) |
-
-| Vectorstore | [ChromaDB](https://docs.trychroma.com/) |
-
-| LLM | [Ollama](https://ollama.ai/) via [LangChain](https://python.langchain.com/) |
-
-| Embeddings | `nomic-embed-text` |
-
-| Auth | JWT-based OAuth2 |
-
-| Logging | Structured, centralized logging |
-
-  
-
----
-
----
+| Component    | Technology                                                                 |
+|--------------|---------------------------------------------------------------------------|
+| Framework    | [FastAPI](https://fastapi.tiangolo.com/)                                  |
+| ORM          | [SQLAlchemy](https://www.sqlalchemy.org/)                                 |
+| Vectorstore  | [ChromaDB](https://docs.trychroma.com/)                                   |
+| LLM          | [Ollama](https://ollama.ai/) via [LangChain](https://python.langchain.com/) |
+| Embeddings   | `nomic-embed-text`                                                        |
+| Auth         | JWT-based OAuth2                                                          |
+| Logging      | Structured, centralized logging                                           |
 
   
 
