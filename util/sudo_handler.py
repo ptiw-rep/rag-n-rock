@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from database.models import File as DBFile, ChatHistory
-from data_plane.rag_pipeline import RAGPipeline
+from rag.rag_pipeline import RAGPipeline
 from fastapi import HTTPException
 from datetime import datetime
 from typing import Any, Dict

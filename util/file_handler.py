@@ -1,7 +1,7 @@
 from fastapi import UploadFile, HTTPException, File, Depends
 from sqlalchemy.orm import Session
 from database.models import File as DBFile
-from data_plane.rag_pipeline import ALLOWED_FILE_EXTENSIONS
+from rag.rag_pipeline import ALLOWED_FILE_EXTENSIONS
 
 from datetime import datetime
 import os

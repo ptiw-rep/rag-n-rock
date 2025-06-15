@@ -1,5 +1,5 @@
 import logging
-from ..data_plane.models.data_schema import RegisterRequest
+from ..rag.models.data_schema import RegisterRequest
 from sqlalchemy.orm import Session
 
 log  = logging.getLogger(__name__)

@@ -7,20 +7,28 @@ from langchain_chroma import Chroma
 from langchain_ollama import OllamaEmbeddings, OllamaLLM
 from langchain_core.documents import Document
 
+from rag.llm_provider import LLMProvider
+
 ALLOWED_FILE_EXTENSIONS = {'.pdf', '.docx', '.txt', '.csv', '.xlsx'}
 
 class RAGPipeline:
-    def __init__(self, vector_db_path: str = "./chroma_db", chunking_strategy: str = "auto"):
+    def __init__(
+            self,
+            model_provider: Optional[LLMProvider] = None,
+            vector_db_path: str = "./chroma_db", 
+            chunking_strategy: str = "auto"
+            ):
         """
         :param vector_db_path: Path for ChromaDB persistence
         :param chunking_strategy: 'auto', 'header', or 'character'. If 'auto', use header-based for markdown, otherwise fallback.
         """
         self.vector_db_path = vector_db_path
-        self.embeddings = OllamaEmbeddings(model="nomic-embed-text")
+        self.model_provider = model_provider or LLMProvider()
+        self.embeddings = self.model_provider.get_embeddings_model()
         
         self.vectorstore = Chroma(persist_directory=self.vector_db_path, embedding_function=self.embeddings)
 
-        self.llm = OllamaLLM(model="llama3")
+        self.llm = self.model_provider.get_inference_model()
         self.chunking_strategy = chunking_strategy
         logging.info(f"Initialized RAGPipeline.")
 

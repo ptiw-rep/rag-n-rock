@@ -9,12 +9,11 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from database.db_session import get_db, init_db
 
-from data_plane.rag_pipeline import RAGPipeline
-from data_plane.models.data_schema import ChatRequest
-from data_plane.models.data_schema import  ChatResponse, AdminClearAllResponse
-from routes import file_routes
+from rag.rag_pipeline import RAGPipeline
+from rag.models.data_schema import ChatRequest
+from rag.models.data_schema import  ChatResponse, AdminClearAllResponse
+from rag.llm_provider import LLMProvider
 
-from routes import auth_routes
 from util.sudo_handler import clear_all_service
 from util.chat_handler import chat_service
 from util.error_handler import (
@@ -22,6 +21,9 @@ from util.error_handler import (
     sqlalchemy_exception_handler, 
     generic_exception_handler
     )
+
+from routes import file_routes
+from routes import auth_routes
 
 from langchain_ollama import OllamaLLM
 ollama_llm = OllamaLLM(model="gemma3:4b")
@@ -52,7 +54,7 @@ os.makedirs(CHROMA_PATH, exist_ok=True)
 
 # Initialize DB and RAG pipeline
 init_db()
-rag_pipeline = RAGPipeline(vector_db_path=CHROMA_PATH)
+rag_pipeline = RAGPipeline(model_provider=LLMProvider(embedding_model="nomic-embed-text", llm_model="mistral"), vector_db_path=CHROMA_PATH)
 
 # Base routes definition added here to reduce unnecessary complexity with API Router.
 @app.post("/api/admin/clear_all", response_model=AdminClearAllResponse)

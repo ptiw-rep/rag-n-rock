@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 import os
 
-from data_plane.models.data_schema import FileUploadResponse,  FileListItem
+from rag.models.data_schema import FileUploadResponse,  FileListItem
 from util.file_handler import (
     upload_file,
     list_files,
@@ -11,14 +11,13 @@ from util.file_handler import (
     ALLOWED_FILE_EXTENSIONS
 )
 from database.models import File as DBFile, User
-from data_plane.rag_pipeline import RAGPipeline
-from data_plane import rag_pipeline
+from rag.rag_pipeline import RAGPipeline
+from rag import rag_pipeline
 
 from .auth_routes import get_current_user
 from database.db_session import get_db
 
 router = APIRouter()
-
 
 @router.post("/upload", response_model=FileUploadResponse)
 def upload_file_in_db(

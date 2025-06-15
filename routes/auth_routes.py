@@ -1,13 +1,12 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from jose import JWTError
+from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from datetime import timedelta
-from jose import jwt
 
 from database.db_session import get_db
-from data_plane.models.data_schema import RegisterRequest
+from rag.models.data_schema import RegisterRequest
 from database.models import User
 from util.auth_handler import get_password_hash, authenticate_user,create_access_token,ACCESS_TOKEN_EXPIRE_MINUTES
 
