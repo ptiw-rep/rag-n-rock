@@ -1,6 +1,6 @@
 import os
 
-from fastapi import FastAPI, HTTPException, Depends, Query, Header, File
+from fastapi import FastAPI, HTTPException, Depends, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
 
 from sqlalchemy.orm import Session
@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from database.db_session import get_db, init_db
 
-from data_plane.rag_pipeline import RAGPipeline, ALLOWED_FILE_EXTENSIONS
+from data_plane.rag_pipeline import RAGPipeline
 from data_plane.models.data_schema import ChatRequest
 from data_plane.models.data_schema import  ChatResponse, AdminClearAllResponse
 from routes import file_routes
@@ -38,7 +38,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Define and add routes for each module.
 app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
 app.include_router(file_routes.router, prefix="/api/files", tags=["files"])
@@ -55,8 +54,7 @@ os.makedirs(CHROMA_PATH, exist_ok=True)
 init_db()
 rag_pipeline = RAGPipeline(vector_db_path=CHROMA_PATH)
 
-
-
+# Base routes definition added here to reduce unnecessary complexity with API Router.
 @app.post("/api/admin/clear_all", response_model=AdminClearAllResponse)
 def clear_all(
     admin_token: str = Header(..., alias="admin-token", min_length=8, max_length=128), 

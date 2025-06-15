@@ -11,8 +11,6 @@ from data_plane.models.data_schema import RegisterRequest
 from database.models import User
 from util.auth_handler import get_password_hash, authenticate_user,create_access_token,ACCESS_TOKEN_EXPIRE_MINUTES
 
-
-
 log = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -62,7 +60,7 @@ def register_user(request : RegisterRequest, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return {"message": "User created successfully"}
 
-@router.post("/api/auth/login")
+@router.post("login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """_summary_
 
