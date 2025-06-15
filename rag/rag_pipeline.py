@@ -4,7 +4,7 @@ from typing import List, Optional
 from langchain_community.document_loaders import PyPDFLoader, UnstructuredWordDocumentLoader, TextLoader, CSVLoader, UnstructuredExcelLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
 from langchain_chroma import Chroma
-from langchain_ollama import OllamaEmbeddings, OllamaLLM
+
 from langchain_core.documents import Document
 
 from rag.llm_provider import LLMProvider

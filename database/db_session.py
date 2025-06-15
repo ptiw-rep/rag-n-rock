@@ -2,9 +2,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from .models import Base
 import os
+from rag import CHROMA_PATH
 
 DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/chat_rag.db"))
-CHROMA_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/chroma_db"))
 
 os.makedirs(CHROMA_PATH, exist_ok=True)
 

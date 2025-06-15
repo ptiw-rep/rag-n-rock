@@ -11,7 +11,6 @@ import uuid
 UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data/files"))
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# TODO; Check all invocations and add User Id param
 def upload_file(file: UploadFile = File(...), db: Session = Depends(), user_id: str = None):
     ext = os.path.splitext(file.filename)[-1].lower()
     if ext not in ALLOWED_FILE_EXTENSIONS:
