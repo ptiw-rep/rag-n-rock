@@ -59,7 +59,7 @@ def register_user(request : RegisterRequest, db: Session = Depends(get_db)):
     db.refresh(new_user)
     return {"message": "User created successfully"}
 
-@router.post("login")
+@router.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """_summary_
 

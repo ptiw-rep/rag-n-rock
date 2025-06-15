@@ -1,7 +1,7 @@
 from langchain_ollama import OllamaEmbeddings, OllamaLLM
 
 class LLMProvider:
-    def __init__(self, embedding_model: str = "nomic-embed-text", llm_model: str = "llama3"):
+    def __init__(self, embedding_model: str = "nomic-embed-text:latest", llm_model: str = "gemma3:4b"):
         self.embedding_model = embedding_model
         self.llm_model = llm_model
 

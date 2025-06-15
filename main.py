@@ -44,7 +44,7 @@ app.add_middleware(
 
 # Define and add routes for each module.
 app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
-app.include_router(file_routes.router, prefix="/api/files", tags=["files"])
+app.include_router(file_routes.router, prefix="/api", tags=["files"])
 
 # Register centralized error handlers
 app.add_exception_handler(HTTPException, http_exception_handler)
