@@ -16,7 +16,9 @@ from database.models import File as DBFile, User
 from data_plane.rag_pipeline import RAGPipeline, ALLOWED_FILE_EXTENSIONS
 from data_plane.models.data_schema import ChatRequest, RegisterRequest
 from data_plane.models.data_schema import FileUploadResponse, FileListItem, ChatResponse, AdminClearAllResponse
+from routes import file_routes
 
+from routes import auth_routes
 from util.sudo_handler import clear_all_service
 from util.chat_handler import chat_service
 from util.error_handler import (
@@ -51,6 +53,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# Define and add routes for each module.
+app.include_router(auth_routes.router, prefix="/api/auth", tags=["auth"])
+app.include_router(file_routes.router, prefix="/api/files", tags=["files"])
+
 # Register centralized error handlers
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(SQLAlchemyError, sqlalchemy_exception_handler)
@@ -63,53 +70,7 @@ os.makedirs(CHROMA_PATH, exist_ok=True)
 init_db()
 rag_pipeline = RAGPipeline(vector_db_path=CHROMA_PATH)
 
-SECRET_KEY = "my-secret-key"
-ALGORITHM = "HS256"
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        return {"username": username}
-    
-    except JWTError:
-        raise credentials_exception
-
-@app.post("/api/auth/register")
-def register_user(request: RegisterRequest, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.username == request.username).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Username already taken")
-    hashed_pw = get_password_hash(request.password)
-    new_user = User(username=request.username, password_hash=hashed_pw)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return {"message": "User created successfully"}
-
-@app.post("/api/auth/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
-    )
-    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.post("/api/admin/clear_all", response_model=AdminClearAllResponse)
 def clear_all(
@@ -179,109 +140,6 @@ def health_check():
         "llm": {"ok": llm_ok, "msg": llm_msg, "model": llm_model}
     }
 
-@app.post("/api/upload", response_model=FileUploadResponse)
-def upload_file_in_db(
-    file: UploadFile = File(...), 
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
-    ) -> FileUploadResponse:
-    """
-    Upload a file and ingest into the RAG pipeline. Delegates business logic to file_service.
-    Validates file extension against SUPPORTED_EXTENSIONS.
-    """
-    ext = os.path.splitext(file.filename)[-1].lower()
-    if ext not in ALLOWED_FILE_EXTENSIONS:
-        raise HTTPException(status_code=422, detail=f"Unsupported file type: {ext}")
-    
-    # Get or create the user in DB based on current_user['username']
-    db_user = db.query(User).filter(User.username == current_user["username"]).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    db_file = upload_file(file=file, db=db, user_id=db_user.id)
-    # Ingest into RAG pipeline (kept here to avoid circular dependency)
-    try:
-        rag_pipeline.ingest(db_file.filepath, metadata={"file_id": db_file.id, "filename": db_file.filename})
-    except Exception as e:
-        db.delete(db_file)
-        db.commit()
-        os.remove(db_file.filepath)
-        raise HTTPException(status_code=500, detail=f"RAG ingestion failed: {str(e)}")
-    return FileUploadResponse(id=db_file.id, filename=db_file.filename)
-
-@app.get("/api/files", response_model=list[FileListItem])
-def list_files_in_db(
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
-    ) -> list[FileListItem]:
-    """
-    List all files in the database. Delegates business logic to file_service.
-    """
-    # Get user from DB based on username
-    db_user = db.query(User).filter(User.username == current_user["username"]).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    files = list_files(db=db, user_id=db_user.id)
-    return [
-        FileListItem(
-            id=f.id,
-            filename=f.filename,
-            upload_time=f.upload_time,
-            file_metadata=f.file_metadata
-        ) for f in files
-    ]
-
-@app.delete("/api/files/{file_id}")
-def delete_file_in_db(
-    file_id: int, 
-    db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
-    ) -> dict:
-    """
-    Delete a file: removes from DB and disk, attempts vectorstore cleanup. 
-    Delegates business logic to file_service for DB/disk, keeps vectorstore logic here to avoid circular dependency.
-    """
-    # Get the file first
-    db_file = db.query(DBFile).filter(DBFile.id == file_id).first()
-    if not db_file:
-        raise HTTPException(status_code=404, detail="File not found")
-
-    # Get the current user from the DB
-    db_user = db.query(User).filter(User.username == current_user["username"]).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Ensure current user owns this file
-    if db_file.user_id != db_user.id:
-        raise HTTPException(status_code=403, detail="You are not authorized to delete this file")
-    
-    # Remove from DB and disk
-    result = delete_file(file_id=file_id, db=db)
-
-    # Remove from vectorstore
-    errors = result.get("warnings", [])
-    try:
-        rag_pipeline.vectorstore.delete(where={"file_id": file_id})
-        
-        rag_pipeline.vectorstore = RAGPipeline(vector_db_path=rag_pipeline.vector_db_path).vectorstore
-
-    except Exception as e:
-        errors.append(f"Vectorstore delete by file_id (where) error: {e}")
-        print(f"[DeleteFile] Chroma delete API mismatch or failure: {e}")
-
-    try:
-        # Try by filename (if file still exists)
-        db_file = db.query(DBFile).filter(DBFile.id == file_id).first()
-        if db_file:
-            rag_pipeline.vectorstore.delete(where={"filename": db_file.filename})
-            rag_pipeline.vectorstore = RAGPipeline(vector_db_path=rag_pipeline.vector_db_path).vectorstore
-
-    except Exception as e:
-        errors.append(f"Vectorstore delete by filename (where) error: {e}")
-        print(f"[DeleteFile] Chroma delete API mismatch or failure: {e}")
-
-    return {"status": "deleted", "warnings": errors}
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(
@@ -289,7 +147,7 @@ def chat(
     question: str = Query(None, min_length=3, max_length=500),
     file_id: int = Query(None),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(auth_routes.get_current_user)
     ) -> ChatResponse:
     """
     Chat endpoint: supports hybrid retrieval (keywords, metadata, MMR, k). Accepts ChatRequest body or legacy query params.
