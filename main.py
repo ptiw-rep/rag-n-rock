@@ -1,9 +1,10 @@
 import os
 
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Query, Header, status
+from fastapi import FastAPI, UploadFile, HTTPException, status, Depends, Query, Header, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
+from datetime import timedelta
 
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -12,14 +13,28 @@ from sqlalchemy.exc import SQLAlchemyError
 from database.db_session import get_db, init_db
 from database.models import File as DBFile, User
 
-from data_plane.models.data_schema import ChatRequest
 from data_plane.rag_pipeline import RAGPipeline, ALLOWED_FILE_EXTENSIONS
+from data_plane.models.data_schema import ChatRequest, RegisterRequest
 from data_plane.models.data_schema import FileUploadResponse, FileListItem, ChatResponse, AdminClearAllResponse
 
-from util.error_handler import http_exception_handler, sqlalchemy_exception_handler, generic_exception_handler
 from util.sudo_handler import clear_all_service
-from util.file_handler import upload_file, list_files, delete_file
 from util.chat_handler import chat_service
+from util.error_handler import (
+    http_exception_handler, 
+    sqlalchemy_exception_handler, 
+    generic_exception_handler
+    )
+from util.file_handler import (
+    upload_file, 
+    list_files, 
+    delete_file
+    )
+from util.auth_handler import (
+    get_password_hash, 
+    authenticate_user, 
+    create_access_token, 
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    )
 
 from langchain_ollama import OllamaLLM
 ollama_llm = OllamaLLM(model="gemma3:4b")
@@ -27,7 +42,7 @@ ollama_llm = OllamaLLM(model="gemma3:4b")
 UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/files"))
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-app = FastAPI(title="RAG-narok")
+app = FastAPI(title="RAG-n-rock")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -51,7 +66,7 @@ rag_pipeline = RAGPipeline(vector_db_path=CHROMA_PATH)
 SECRET_KEY = "my-secret-key"
 ALGORITHM = "HS256"
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -68,6 +83,33 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     
     except JWTError:
         raise credentials_exception
+
+@app.post("/api/auth/register")
+def register_user(request: RegisterRequest, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.username == request.username).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Username already taken")
+    hashed_pw = get_password_hash(request.password)
+    new_user = User(username=request.username, password_hash=hashed_pw)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return {"message": "User created successfully"}
+
+@app.post("/api/auth/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = authenticate_user(db, form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.post("/api/admin/clear_all", response_model=AdminClearAllResponse)
 def clear_all(

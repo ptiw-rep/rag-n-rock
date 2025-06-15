@@ -2,6 +2,10 @@ from pydantic import BaseModel, Field
 from typing import Optional, List, Any
 from datetime import datetime
 
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+
 class FileUploadResponse(BaseModel):
     id: int
     filename: str
