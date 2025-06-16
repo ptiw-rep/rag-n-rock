@@ -7,8 +7,8 @@ class LLMProvider:
         self.embedding_model = embedding_model
         self.llm_model = llm_model
         logger.info(f"Initializing LLMProvider with:")
-        logger.info(f"  Embedding Model: {self.embedding_model}")
-        logger.info(f"  Inference Model: {self.llm_model}")
+        logger.info(f"Embedding Model: {self.embedding_model}")
+        logger.info(f"Inference Model: {self.llm_model}")
 
     def get_embeddings_model(self) -> OllamaEmbeddings:
         logger.debug(f"Loading embedding model: {self.embedding_model}")

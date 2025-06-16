@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from database.db_session import get_db, init_db
 
 from rag import rag_pipeline, model_provider, CHROMA_PATH
+from config import get_env
 from util import logger
 
 from rag.models.data_schema import ChatRequest
@@ -74,7 +75,7 @@ def clear_all(
     """
     logger.info("Received request to clear all data via /api/admin/clear_all")
 
-    ADMIN_TOKEN = os.environ.get("CHAT_RAG_ADMIN_TOKEN", "supersecret")
+    ADMIN_TOKEN = get_env("CHAT_RAG_ADMIN_TOKEN", "supersecret")
     if not (admin_token.isalnum() or '-' in admin_token or '_' in admin_token):
         logger.warning("Invalid admin token format.")
         raise HTTPException(status_code=422, detail="Invalid admin token format.")

@@ -12,12 +12,13 @@ from jose import JWTError, jwt
 from database.models import User as DBUser
 from database.db_session import get_db
 
+from config import get_env
 from util import logger
 
 # Configuration
-SECRET_KEY = "my-secret-key" 
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+SECRET_KEY = get_env("SECRET_KEY", "my-secret-key")
+ALGORITHM = get_env("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = get_env("ACCESS_TOKEN_EXPIRE_MINUTES", 30)
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"])

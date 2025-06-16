@@ -1,6 +1,7 @@
 import os
 import logging
 from logging.handlers import RotatingFileHandler
+from config import get_env
 
 def setup_logger(name="rag-n-rock", log_file=None):
     """
@@ -11,10 +12,10 @@ def setup_logger(name="rag-n-rock", log_file=None):
     os.makedirs(LOG_DIR, exist_ok=True)
 
     if not log_file:
-        log_file = os.path.join(LOG_DIR, "app.log")
+        log_file = os.path.join("./data/app.log")
 
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG if os.getenv("DEBUG", "false").lower() == "true" else logging.WARN)
+    logger.setLevel(logging.DEBUG if get_env("DEBUG", "false").lower() == "true" else logging.WARN)
 
     # Avoid adding multiple handlers
     if not logger.handlers:

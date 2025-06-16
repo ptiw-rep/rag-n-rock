@@ -5,6 +5,7 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from datetime import timedelta
 
+from config import get_env
 from util import logger
 from database.db_session import get_db
 from rag.models.data_schema import RegisterRequest
@@ -14,8 +15,8 @@ from util.auth_handler import get_password_hash, authenticate_user,create_access
 log = logging.getLogger(__name__)
 
 router = APIRouter()
-SECRET_KEY = "my-secret-key"
-ALGORITHM = "HS256"
+SECRET_KEY = get_env("SECRET_KEY", "my-secret-key")
+ALGORITHM = get_env("ALGORITHM", "HS256")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
