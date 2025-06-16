@@ -1,5 +1,4 @@
 from fastapi import HTTPException
-from datetime import datetime
 from typing import Any, Dict
 from sqlalchemy.orm import Session
 

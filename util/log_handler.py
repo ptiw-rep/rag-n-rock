@@ -14,7 +14,7 @@ def setup_logger(name="rag-n-rock", log_file=None):
         log_file = os.path.join(LOG_DIR, "app.log")
 
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG if os.getenv("DEBUG", "false").lower() == "true" else logging.INFO)
+    logger.setLevel(logging.DEBUG if os.getenv("DEBUG", "false").lower() == "true" else logging.WARN)
 
     # Avoid adding multiple handlers
     if not logger.handlers:
