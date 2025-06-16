@@ -148,6 +148,7 @@ def health_check():
 
     except Exception as e:
         llm_msg = str(e)
+        llm_ok = False
         logger.error(f"LLM health check failed: {llm_msg}", exc_info=True)
 
     status = "ok" if all([db_ok, vec_ok, llm_ok]) else "degraded"
