@@ -38,7 +38,7 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         return {"username": username}
     
     except JWTError:
-        logger.error(f"JWT decoding error: {str(e)}", exc_info=True)
+        logger.error(f"JWT decoding error.", exc_info=True)
         raise credentials_exception
     
 @router.post("/register")
