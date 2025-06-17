@@ -79,7 +79,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
             logger.warning("Token missing 'sub' claim")
             raise credentials_exception
     except JWTError:
-        logger.error(f"JWT decoding error: {str(e)}", exc_info=True)
+        logger.error(f"JWT decoding error.", exc_info=True)
         raise credentials_exception
     
     user = get_user(db, username=username)

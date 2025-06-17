@@ -5,7 +5,7 @@ from .models import Base
 from util import logger
 from rag import CHROMA_PATH
 
-DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/chat_rag.db"))
+DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../data/chat_rag.db"))
 
 os.makedirs(CHROMA_PATH, exist_ok=True)
 
